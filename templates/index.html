@@ -1,0 +1,101 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>QCar Control</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>QCar Control</h1>
+    <img src="{{ url_for('video_feed') }}" width="640" height="480">
+    <div>
+        <button onclick="sendCommand('navigate')">Navigate</button>
+        <button onclick="sendCommand('explore')">Explore</button>
+        <button onclick="sendCommand('search')">Search</button>
+        <button onclick="sendCommand('track')">Track</button>
+        <button onclick="sendCommand('stop')">Stop</button>
+    </div>
+    <div>
+        <h2>Status: <span id="status"></span></h2>
+    </div>
+    <div>
+        <canvas id="lidarChart" width="400" height="400"></canvas>
+        <canvas id="pathCanvas" width="400" height="400"></canvas>
+    </div>
+
+    <script>
+        function sendCommand(command) {
+            fetch('/command/' + command, { method: 'POST' });
+        }
+
+        const statusElement = document.getElementById('status');
+        const statusEventSource = new EventSource("{{ url_for('status_feed') }}");
+        statusEventSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            statusElement.innerHTML = data.state;
+        };
+
+        const lidarChartCtx = document.getElementById('lidarChart').getContext('2d');
+        const lidarChart = new Chart(lidarChartCtx, {
+            type: 'polarArea',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Lidar Distances',
+                    data: [],
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    r: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        const lidarEventSource = new EventSource("{{ url_for('lidar_feed') }}");
+        lidarEventSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            lidarChart.data.labels = data.angles;
+            lidarChart.data.datasets[0].data = data.distances;
+            lidarChart.update();
+        };
+
+        const pathCanvas = document.getElementById('pathCanvas');
+        const pathCtx = pathCanvas.getContext('2d');
+        const pathEventSource = new EventSource("/path_feed");
+        pathEventSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            drawGrid(data.grid, data.path);
+        };
+
+        function drawGrid(grid, path) {
+            pathCtx.clearRect(0, 0, pathCanvas.width, pathCanvas.height);
+            const cellSize = 40;
+            for (let i = 0; i < grid.length; i++) {
+                for (let j = 0; j < grid[i].length; j++) {
+                    pathCtx.fillStyle = grid[i][j] === 1 ? 'black' : 'white';
+                    pathCtx.fillRect(j * cellSize, i * cellSize, cellSize, cellSize);
+                    pathCtx.strokeStyle = 'gray';
+                    pathCtx.strokeRect(j * cellSize, i * cellSize, cellSize, cellSize);
+                }
+            }
+
+            if (path) {
+                pathCtx.strokeStyle = 'blue';
+                pathCtx.lineWidth = 2;
+                pathCtx.beginPath();
+                pathCtx.moveTo(path[0][1] * cellSize + cellSize / 2, path[0][0] * cellSize + cellSize / 2);
+                for (let i = 1; i < path.length; i++) {
+                    pathCtx.lineTo(path[i][1] * cellSize + cellSize / 2, path[i][0] * cellSize + cellSize / 2);
+                }
+                pathCtx.stroke();
+            }
+        }
+    </script>
+</body>
+</html>

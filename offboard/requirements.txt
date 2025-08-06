@@ -1,0 +1,7 @@
+Flask
+requests
+SpeechRecognition
+gTTS
+pyaudio
+playsound
+Flask-SocketIO

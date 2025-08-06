@@ -1,0 +1,5 @@
+pal-products
+pal-utilities
+numpy
+opencv-python
+python-socketio
