@@ -1,0 +1,12 @@
+numpy
+opencv-python
+pyttsx3
+matplotlib
+requests
+gtts
+SpeechRecognition
+pyaudio
+playsound
+
+# Note: The Quanser and PAL libraries are specific to the QCar hardware
+# and are assumed to be installed in the QCar's environment.
